@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, constant_identifier_names, prefer_iterable_wheretype
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';

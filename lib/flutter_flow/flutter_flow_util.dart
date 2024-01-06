@@ -1,3 +1,5 @@
+// ignore_for_file: type_literal_in_constant_pattern, unnecessary_string_escapes, prefer_const_constructors
+
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -6,11 +8,9 @@ import 'package:from_css_color/from_css_color.dart';
 import 'package:intl/intl.dart';
 import 'package:json_path/json_path.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 
-import 'lat_lng.dart';
 
 export 'lat_lng.dart';
 export 'place.dart';
@@ -34,15 +34,6 @@ String dateTimeFormat(String format, DateTime? dateTime, {String? locale}) {
     return timeago.format(dateTime, locale: locale, allowFromNow: true);
   }
   return DateFormat(format, locale).format(dateTime);
-}
-
-Future launchURL(String url) async {
-  var uri = Uri.parse(url).toString();
-  try {
-    await launch(uri);
-  } catch (e) {
-    throw 'Could not launch $uri: $e';
-  }
 }
 
 Color colorFromCssString(String color, {Color? defaultColor}) {
@@ -267,7 +258,7 @@ void showSnackbar(
           if (loading)
             Padding(
               padding: EdgeInsetsDirectional.only(end: 10.0),
-              child: Container(
+              child: SizedBox(
                 height: 20,
                 width: 20,
                 child: const CircularProgressIndicator(

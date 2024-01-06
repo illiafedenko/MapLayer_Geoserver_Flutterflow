@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages, avoid_function_literals_in_foreach_calls, type_literal_in_constant_pattern
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';

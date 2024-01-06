@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 class FlutterFlowDropDown<T> extends StatefulWidget {
   const FlutterFlowDropDown({
-    Key? key,
+    super.key,
     required this.controller,
     this.hintText,
     this.searchHintText,
@@ -31,7 +31,7 @@ class FlutterFlowDropDown<T> extends StatefulWidget {
     this.isOverButton = false,
     this.isSearchable = false,
     this.isMultiSelect = false,
-  }) : super(key: key);
+  });
 
   final FormFieldController<T> controller;
   final String? hintText;
@@ -144,7 +144,7 @@ class _FlutterFlowDropDownState<T> extends State<FlutterFlowDropDown<T>> {
       ),
     );
     if (widget.height != null || widget.width != null) {
-      return Container(
+      return SizedBox(
         width: widget.width,
         height: widget.height,
         child: childWidget,
@@ -247,7 +247,7 @@ class _FlutterFlowDropDownState<T> extends State<FlutterFlowDropDown<T>> {
       ),
       menuItemStyleData: MenuItemStyleData(overlayColor: overlayColor),
       dropdownStyleData: DropdownStyleData(
-        elevation: widget.elevation!.toInt(),
+        elevation: widget.elevation.toInt(),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),
           color: widget.fillColor,

@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, avoid_print
+
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'lat_lng.dart' as latlng;
 export 'dart:async' show Completer;
 export 'package:google_maps_flutter/google_maps_flutter.dart' hide LatLng;
 export 'lat_lng.dart' show LatLng;
+import 'package:proj4dart/proj4dart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -32,6 +35,16 @@ enum GoogleMarkerColor {
   rose,
 }
 
+Color getRandomColor() {
+  Random random = Random();
+  return Color.fromARGB(
+    255,
+    random.nextInt(256),
+    random.nextInt(256),
+    random.nextInt(256),
+  );
+}
+
 class FlutterFlowMarker {
   const FlutterFlowMarker(this.markerId, this.location, [this.onTap]);
   final String markerId;
@@ -46,7 +59,7 @@ class FlutterFlowGoogleMap extends StatefulWidget {
     this.initialLocation,
     this.markers = const [],
     this.markerColor = GoogleMarkerColor.red,
-    this.mapType = MapType.normal,
+    this.mapType = MapType.satellite,
     this.style = GoogleMapStyle.standard,
     this.initialZoom = 9,
     this.allowInteraction = true,
@@ -58,8 +71,9 @@ class FlutterFlowGoogleMap extends StatefulWidget {
     this.showTraffic = false,
     this.centerMapOnMarkerTap = false,
     required this.filter,
-    Key? key,
-  }) : super(key: key);
+    required this.tab,
+    super.key,
+  });
 
   final Completer<GoogleMapController> controller;
   final Function(latlng.LatLng)? onCameraIdle;
@@ -78,6 +92,7 @@ class FlutterFlowGoogleMap extends StatefulWidget {
   final bool showTraffic;
   final bool centerMapOnMarkerTap;
   final List<String> filter;
+  final String tab;
   @override
   State<StatefulWidget> createState() => _FlutterFlowGoogleMapState();
 }
@@ -90,7 +105,6 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
   late Completer<GoogleMapController> _controller;
   late LatLng currentMapCenter;
   GoogleMapController? mapController;
-  final LatLng _center = const LatLng(26.3005351, 50.182);
   final Set<Polygon> _polygons = <Polygon>{};
   dynamic polygonData;
 
@@ -130,21 +144,22 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
         },
       );
     } catch (e) {
-      print("e");
       print(e);
     }
   }
 
   Future<void> fetchData(VoidCallback onDone) async {
-    // Simulate fetching data from the network
-    final response = await http.get(Uri.parse(
-        'http://34.72.17.139:8080/geoserver/map_layers_m/wms?service=WMS&version=1.1.0&request=GetMap&layers=map_layers_m%3Aeast_dist_gs&bbox=47.005306243896484%2C25.90535545349121%2C50.24072265625%2C28.50123405456543&width=768&height=616&srs=EPSG%3A4326&styles=&format=geojson'));
+    String uri = widget.tab == "Polygon"
+        ? 'http://34.72.17.139:8080/geoserver/map_layers_m/wms?service=WMS&version=1.1.0&request=GetMap&layers=map_layers_m%3Aeast_dist_gs&bbox=47.005306243896484%2C25.90535545349121%2C50.24072265625%2C28.50123405456543&width=768&height=616&srs=EPSG%3A4326&styles=&format=geojson'
+        : "http://34.72.17.139:8080/geoserver/map_layers_m/wms?service=WMS&version=1.1.0&request=GetMap&layers=map_layers_m%3Aeast_300hex&bbox=353046.0%2C2881169.0%2C424554.0%2C3005812.0&width=440&height=768&srs=EPSG%3A32639&styles=&format=geojson";
+
+    final response = await http.get(Uri.parse(uri));
 
     if (response.statusCode == 200) {
       dynamic datas = jsonDecode(utf8.decode(response.bodyBytes))['features'];
       setState(() {
         polygonData = datas;
-        onDone(); // Call the provided callback after setting the state
+        onDone(); //
       });
     } else {
       throw Exception('Failed to load data');
@@ -153,38 +168,114 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    // Ensure the data has been fetched before creating polygons
     if (polygonData != null) {
       createPolygons();
     }
   }
 
   List filterData() {
-  if (widget.filter.isNotEmpty) {
-    String city = widget.filter[0].toLowerCase();
-    String engName = widget.filter[1].toLowerCase();
-    String arabicName = widget.filter[2].toLowerCase();
+    if (widget.tab == "Polygon") {
+      if (widget.filter.isNotEmpty) {
+        String city = widget.filter[0].toLowerCase();
+        String engName = widget.filter[1].toLowerCase();
+        String arabicName = widget.filter[2].toLowerCase();
 
-    return polygonData.where((feature) {
-      final properties = feature['properties'];
+        return polygonData.where((feature) {
+          final properties = feature['properties'];
 
-      bool matchesCityName = city.isEmpty ||
-          (properties['city_name_a'] != null &&
-              properties['city_name_a'].toLowerCase().contains(city));
-      bool matchesDistAr = arabicName.isEmpty ||
-          (properties['dist_ar'] != null &&
-              properties['dist_ar'].toLowerCase().contains(arabicName));
-      bool matchesDistEn = engName.isEmpty ||
-          (properties['dist_en'] != null &&
-              properties['dist_en'].toLowerCase().contains(engName));
+          bool matchesCityName = city.isEmpty ||
+              (properties['city_name_a'] != null &&
+                  properties['city_name_a'].toLowerCase().contains(city));
+          bool matchesDistAr = arabicName.isEmpty ||
+              (properties['dist_ar'] != null &&
+                  properties['dist_ar'].toLowerCase().contains(arabicName));
+          bool matchesDistEn = engName.isEmpty ||
+              (properties['dist_en'] != null &&
+                  properties['dist_en'].toLowerCase().contains(engName));
 
-      // Feature should match all non-empty criteria to be included.
-      return matchesCityName && matchesDistAr && matchesDistEn;
-    }).toList();
-  } else {
-    return polygonData;
+          return matchesCityName && matchesDistAr && matchesDistEn;
+        }).toList();
+      } else {
+        return polygonData;
+      }
+    } else {
+      return polygonData;
+    }
   }
-}
+
+  Color getFillColor(double value) {
+    const double desiredOpacity = 0.5;
+    if (widget.tab == "Polygon") {
+      if (value <= 100) {
+        double opacity = (value / 100.0) * desiredOpacity;
+        return Color.fromRGBO(96, 247, 97, opacity);
+      } else if (value < 500) {
+        double opacity = ((value - 100) / 400) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(96, 247, 97, desiredOpacity),
+          Color.fromRGBO(41, 234, 141, desiredOpacity),
+          opacity,
+        )!;
+      } else if (value < 1000) {
+        double opacity = ((value - 500) / 500) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(41, 234, 141, desiredOpacity),
+          Color.fromRGBO(26, 199, 194, desiredOpacity),
+          opacity,
+        )!;
+      } else if (value < 10000) {
+        double opacity = ((value - 1000) / 9000) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(26, 199, 194, desiredOpacity),
+          Color.fromRGBO(48, 150, 224, desiredOpacity),
+          opacity,
+        )!;
+      } else {
+        return Color.fromRGBO(48, 150, 224, desiredOpacity);
+      }
+    } else {
+      if (value <= 1000) {
+        double opacity = (value / 1000.0) * desiredOpacity;
+        return Color.fromRGBO(96, 247, 97, opacity);
+      } else if (value < 2000) {
+        double opacity = ((value - 1000) / 1000) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(96, 247, 97, desiredOpacity),
+          Color.fromRGBO(41, 234, 141, desiredOpacity),
+          opacity,
+        )!;
+      } else if (value < 5000) {
+        double opacity = ((value - 2000) / 3000) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(41, 234, 141, desiredOpacity),
+          Color.fromRGBO(26, 199, 194, desiredOpacity),
+          opacity,
+        )!;
+      } else if (value < 10000) {
+        double opacity = ((value - 5000) / 5000) * desiredOpacity;
+        return Color.lerp(
+          Color.fromRGBO(26, 199, 194, desiredOpacity),
+          Color.fromRGBO(48, 150, 224, desiredOpacity),
+          opacity,
+        )!;
+      } else {
+        return Color.fromRGBO(48, 150, 224, desiredOpacity);
+      }
+    }
+  }
+
+  Point convertPoint(double x, double y) {
+    var pointSrc = Point(x: x, y: y);
+    var tuple = ProjectionTuple(
+      fromProj: Projection.add(
+        'EPSG:32639',
+        '+proj=utm +zone=39 +datum=WGS84 +units=m +no_defs',
+      ),
+      toProj: Projection.get('EPSG:4326')!,
+    );
+    var pointForward = tuple.forward(pointSrc);
+    return Point(y: pointForward.y, x: pointForward.x);
+  }
 
   void createPolygons() {
     var polygons = filterData();
@@ -192,37 +283,78 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
       _polygons.clear();
       for (final feature in polygons) {
         if (feature['geometry']['type'] == 'Polygon') {
-          List<LatLng> polygonCoordinates = [];
-          final List<dynamic> coordinates =
-              feature['geometry']['coordinates'].first;
+          if (widget.tab == "Polygon") {
+            if (feature['properties']['rard'] != null) {
+              List<LatLng> polygonCoordinates = [];
+              final List<dynamic> coordinates =
+                  feature['geometry']['coordinates'].first;
+              Color fillColor =
+                  getFillColor(feature['properties']['rard'].toDouble());
+              for (final List<dynamic> point in coordinates) {
+                polygonCoordinates.add(
+                  LatLng(point[1].toDouble(), point[0].toDouble()),
+                );
+              }
+              final Polygon polygon = Polygon(
+                polygonId: PolygonId('polygon_${_polygons.length}'),
+                points: polygonCoordinates,
+                strokeWidth: 1,
+                strokeColor: Colors.red,
+                fillColor: fillColor,
+                consumeTapEvents: true,
+                onTap: () => _showInfo(feature['properties']),
+              );
+              setState(() {
+                _polygons.add(polygon);
+              });
+            }
+          } else {
+            if (feature['properties']['aap'] != null) {
+              List<LatLng> polygonCoordinates = [];
+              final List<dynamic> coordinates =
+                  feature['geometry']['coordinates'].first;
+              // Color fillColor = Colors.green;
+              Color fillColor =
+                  getFillColor(feature['properties']['aap'].toDouble());
 
-          for (final List<dynamic> point in coordinates) {
-            polygonCoordinates.add(
-              LatLng(point[1].toDouble(), point[0].toDouble()),
-            );
+              for (final List<dynamic> point in coordinates) {
+                var pointForward =
+                    convertPoint(point[0].toDouble(), point[1].toDouble());
+                polygonCoordinates.add(
+                  LatLng(pointForward.y, pointForward.x),
+                );
+              }
+              final Polygon polygon = Polygon(
+                polygonId: PolygonId('polygon_${_polygons.length}'),
+                points: polygonCoordinates,
+                strokeWidth: 1,
+                strokeColor: Colors.white,
+                fillColor: fillColor,
+                consumeTapEvents: true,
+                onTap: () => _showInfo(feature['properties']),
+              );
+              setState(() {
+                _polygons.add(polygon);
+              });
+            }
           }
-          final Polygon polygon = Polygon(
-            polygonId: PolygonId('polygon_${_polygons.length}'),
-            points: polygonCoordinates,
-            strokeWidth: 2,
-            strokeColor: Colors.black,
-            fillColor: Colors.green.withOpacity(0.5),
-            consumeTapEvents: true,
-            onTap: () => _showInfo(feature['properties']),
-          );
-          setState(() {
-            _polygons.add(polygon);
-          });
         }
       }
-      print("_polygons");
-      print(_polygons.length);
-      print(_polygons);
     });
   }
 
   void onFilterChanged() {
     createPolygons();
+  }
+
+  void onTabChanged() {
+    fetchData(() {
+      createPolygons();
+      if (mapController != null) {
+        _onMapCreated(
+            mapController!); // Make sure this doesn't cause undesired behavior
+      }
+    });
   }
 
   @override
@@ -231,8 +363,7 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
     currentMapCenter = initialPosition;
     _controller = widget.controller;
     fetchData(() {
-      // This will run after the fetchData logic completes and the state is set.
-      if (_center != null && mapController != null) {
+      if (mapController != null) {
         _onMapCreated(mapController!);
       }
     });
@@ -241,11 +372,11 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
   @override
   void didUpdateWidget(FlutterFlowGoogleMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Check if the filter has been updated.
     if (oldWidget.filter != widget.filter) {
-      // The filter has been updated.
-      // Call any methods you need to handle the filter change.
       onFilterChanged();
+    }
+    if (oldWidget.tab != widget.tab) {
+      onTabChanged(); // Handle the logic for tab change
     }
   }
 
@@ -260,7 +391,7 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
             target: initialPosition,
             zoom: initialZoom,
           ),
-          mapType: widget.mapType,
+          mapType: MapType.normal,
           zoomGesturesEnabled: widget.allowZoom,
           zoomControlsEnabled: widget.showZoomControls,
           myLocationEnabled: widget.showLocation,

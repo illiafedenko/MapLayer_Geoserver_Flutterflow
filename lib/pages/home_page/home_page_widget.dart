@@ -1,26 +1,26 @@
-import '/flutter_flow/flutter_flow_drop_down.dart';
+// ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors, avoid_print
+
 import '/flutter_flow/flutter_flow_google_map.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
-import '/flutter_flow/form_field_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
 
 class HomePageWidget extends StatefulWidget {
-  const HomePageWidget({Key? key}) : super(key: key);
+  const HomePageWidget({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _HomePageWidgetState createState() => _HomePageWidgetState();
 }
 
 class _HomePageWidgetState extends State<HomePageWidget> {
   late HomePageModel _model;
+  final _options = ['Polygon', 'Hexagon'];
+  String? _selectedValue = 'Hexagon';
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   List<String> filter = const [];
@@ -68,15 +68,56 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         appBar: AppBar(
           backgroundColor: FlutterFlowTheme.of(context).primary,
           automaticallyImplyLeading: false,
-          title: Text(
-            'Mapping Layer',
-            style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  fontFamily: 'Outfit',
-                  color: Colors.white,
-                  fontSize: 22.0,
-                ),
+          title: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Mapping Layer',
+              style: FlutterFlowTheme.of(context).headlineMedium.override(
+                    fontFamily: 'Outfit',
+                    color: Colors.white,
+                    fontSize: 22.0,
+                  ),
+            ),
           ),
-          actions: [],
+          actions: <Widget>[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButton<String>(
+                style: TextStyle(color: Colors.white),
+                iconEnabledColor: Colors.white,
+                value: _selectedValue,
+                hint: Text(
+                  'Choose an option',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedValue = newValue;
+                  });
+                },
+                items: _options.map((option) {
+                  return DropdownMenuItem(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  );
+                }).toList(),
+                selectedItemBuilder: (BuildContext context) {
+                  return _options.map((String option) {
+                    return Container(
+                      alignment: Alignment.center,
+                      child: Text(
+                        option,
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
+            )
+          ],
           centerTitle: false,
           elevation: 2.0,
         ),
@@ -85,6 +126,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
           child: Column(
             mainAxisSize: MainAxisSize.max,
             children: [
+              _selectedValue=="Polygon"?
               Padding(
                 padding: EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 8.0),
                 child: Row(
@@ -249,7 +291,6 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                         size: 24.0,
                       ),
                       onPressed: () {
-                        print("Over here");
                         setState(() {
                           filter = [
                             _model.textController1.text,
@@ -261,57 +302,28 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                     ),
                   ].divide(SizedBox(width: 8.0)).around(SizedBox(width: 8.0)),
                 ),
-              ),
+              ):Container(),
               Expanded(
-                child: FlutterFlowGoogleMap(
-                  controller: _model.googleMapsController,
-                  onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-                  initialLocation: _model.googleMapsCenter ??=
-                      LatLng(26.30053, 50.182),
-                  markerColor: GoogleMarkerColor.violet,
-                  mapType: MapType.normal,
-                  style: GoogleMapStyle.standard,
-                  initialZoom: 9.0,
-                  allowInteraction: true,
-                  allowZoom: true,
-                  showZoomControls: true,
-                  showLocation: true,
-                  showCompass: true,
-                  showMapToolbar: false,
-                  showTraffic: false,
-                  centerMapOnMarkerTap: true,
-                  filter: filter,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 8.0),
-                child: FlutterFlowDropDown<String>(
-                  controller: _model.dropDownValueController ??=
-                      FormFieldController<String>(null),
-                  options: ['Option 1'],
-                  onChanged: (val) =>
-                      setState(() => _model.dropDownValue = val),
-                  width: 157.0,
-                  height: 50.0,
-                  textStyle: FlutterFlowTheme.of(context).bodyMedium,
-                  hintText: 'Please select...',
-                  icon: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: FlutterFlowTheme.of(context).secondaryText,
-                    size: 24.0,
-                  ),
-                  fillColor: FlutterFlowTheme.of(context).secondaryBackground,
-                  elevation: 2.0,
-                  borderColor: FlutterFlowTheme.of(context).alternate,
-                  borderWidth: 2.0,
-                  borderRadius: 8.0,
-                  margin: EdgeInsetsDirectional.fromSTEB(16.0, 4.0, 16.0, 4.0),
-                  hidesUnderline: true,
-                  isOverButton: true,
-                  isSearchable: false,
-                  isMultiSelect: false,
-                ),
-              ),
+                  child: FlutterFlowGoogleMap(
+                controller: _model.googleMapsController,
+                onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
+                initialLocation: _model.googleMapsCenter ??=
+                    LatLng(26.30053, 50.182),
+                markerColor: GoogleMarkerColor.violet,
+                mapType: MapType.satellite,
+                style: GoogleMapStyle.standard,
+                initialZoom: 9.0,
+                allowInteraction: true,
+                allowZoom: true,
+                showZoomControls: true,
+                showLocation: true,
+                showCompass: true,
+                showMapToolbar: false,
+                showTraffic: false,
+                centerMapOnMarkerTap: true,
+                filter: filter,
+                tab: _selectedValue!,
+              )),
             ],
           ),
         ),
